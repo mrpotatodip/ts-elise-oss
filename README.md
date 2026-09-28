@@ -123,6 +123,8 @@ to show the event name. What happens when `active` turns false is set by
 
 Extracted from a private product's prototype exploration. The engine itself
 is stable and dependency-light; the surrounding app scaffold (routing,
-styling) is intentionally minimal. No license has been chosen yet — treat
-this as source-available, not yet cleared for reuse, until a `LICENSE` file
-is added.
+styling) is intentionally minimal.
+
+## License
+
+[MIT](LICENSE) © 2026 Elise
