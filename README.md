@@ -11,6 +11,25 @@ Works with any AG-UI stream, including
 The first component is the loading indicator: `AGUILoading` (one line) and
 `AGUILoadingStacked` (one row per step).
 
+**Docs and live demos:** [ui.helloelise.app](https://ui.helloelise.app)
+
+## Install
+
+With the [shadcn CLI](https://ui.shadcn.com/docs/cli), in a project that has a
+`components.json`:
+
+```bash
+npx shadcn@latest add https://ui.helloelise.app/r/agui-loading.json
+```
+
+This copies the engine and the React adapter into
+`<your components alias>/agui-loading/` (usually `src/components/agui-loading/`)
+and installs `@ag-ui/core`, `motion`, `clsx` and `tailwind-merge`. Import from
+there, e.g. `@/components/agui-loading` and
+`@/components/agui-loading/adapters/react`.
+
+Or copy `src/core/agui-loading/` from this repo by hand (see below).
+
 ## What's here
 
 - **`src/core/agui-loading/`**: everything you need, in one folder. The engine
@@ -60,7 +79,9 @@ pnpm dev    # docs
 pnpm test   # core tests
 ```
 
-Opens the docs at `http://localhost:3200`. Everything is synthetic — no
+Opens the docs at `http://localhost:3200`. `pnpm run deploy` builds and deploys
+them to Cloudflare Workers at `ui.helloelise.app` (set in `wrangler.jsonc`).
+Everything is synthetic — no
 network calls, no backend, no environment variables needed.
 
 ## Using the engine in your own app (React)
