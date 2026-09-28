@@ -18,3 +18,5 @@ export const DOCS_NAV = [
     ],
   },
 ] as const;
+
+export const DOCS_GITHUB_URL = "https://github.com/mrpotatodip/ts-elise-oss";

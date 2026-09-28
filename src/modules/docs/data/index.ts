@@ -1,1 +1,1 @@
-export { DOCS_NAV } from "./docs-nav";
+export { DOCS_GITHUB_URL, DOCS_NAV } from "./docs-nav";
