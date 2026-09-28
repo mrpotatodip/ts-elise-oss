@@ -20,6 +20,22 @@ With the [shadcn CLI](https://ui.shadcn.com/docs/cli), in a project that has a
 
 ```bash
 npx shadcn@latest add https://ui.helloelise.app/r/agui-loading.json
+# or straight from GitHub
+npx shadcn@latest add mrpotatodip/ts-elise-oss/agui-loading
+```
+
+To use the short `@elise` name, add the registry to your `components.json`:
+
+```json
+{
+  "registries": {
+    "@elise": "https://ui.helloelise.app/r/{name}.json"
+  }
+}
+```
+
+```bash
+npx shadcn@latest add @elise/agui-loading
 ```
 
 This copies the engine and the React adapter into
