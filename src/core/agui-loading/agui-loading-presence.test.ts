@@ -52,3 +52,27 @@ describe("loader presence", () => {
     expect(presenceOnLingerElapsed("running")).toBe("running");
   });
 });
+
+describe("loader presence while waiting", () => {
+  it("starts waiting when the run is waiting", () => {
+    expect(initialAGUILoadingPresence(false, true)).toBe("waiting");
+  });
+
+  it("waits instead of hiding, whatever whenDone says", () => {
+    expect(presenceOnActiveChange("running", false, { whenDone: "hide" }, true)).toBe("waiting");
+    expect(presenceOnActiveChange("running", false, {}, true)).toBe("waiting");
+  });
+
+  it("runs again when the next run starts", () => {
+    expect(presenceOnActiveChange("waiting", true)).toBe("running");
+  });
+
+  it("applies whenDone when it stops waiting without a new run", () => {
+    expect(presenceOnActiveChange("waiting", false, { whenDone: "hide" })).toBe("hidden");
+    expect(presenceOnActiveChange("waiting", false, { whenDone: "keep" })).toBe("done");
+  });
+
+  it("a linger timeout doesn't hide a waiting loader", () => {
+    expect(presenceOnLingerElapsed("waiting")).toBe("waiting");
+  });
+});

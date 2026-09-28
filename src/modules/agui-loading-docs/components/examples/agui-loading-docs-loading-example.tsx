@@ -55,8 +55,10 @@ export function AGUILoadingDocsLoadingExample() {
       title="<AGUILoading />"
       description="The same loader, built from parts. Put the parts in any order, leave some out, and add your own elements."
       status={state.lastEventType ?? state.status}
-      onPlay={() => play("happy-path")}
-      onPlayError={() => play("mid-stream-error")}
+      plays={[
+        { label: "Run", onClick: () => play("happy-path") },
+        { label: "Error", onClick: () => play("mid-stream-error") },
+      ]}
       onReset={reset}
       source={source}
     >

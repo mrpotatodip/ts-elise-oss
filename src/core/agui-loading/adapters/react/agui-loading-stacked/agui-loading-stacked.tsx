@@ -50,9 +50,8 @@ export type AGUILoadingStackedProps = Omit<ComponentProps<"div">, "role"> & {
 } & AGUILoadingStackedWhenDoneProps;
 
 // -----
-// Root of the stacked loader. Put the parts inside in
-// any order, with your own elements between them.
-// Style it with data-status: running, done or failed.
+// Root of the stacked loader. Style it with data-status:
+// running, waiting, done, failed or stopped.
 // -----
 export function AGUILoadingStacked({
   state,
@@ -64,15 +63,17 @@ export function AGUILoadingStacked({
   ...props
 }: AGUILoadingStackedProps) {
   const running = state.status === "running";
-  const presence = useAGUILoadingPresence(running, {
-    whenDone: whenDone === "keep" ? "keep" : "linger",
-    lingerMs,
-  });
+  const waiting = state.status === "waiting";
+  const presence = useAGUILoadingPresence(
+    running,
+    { whenDone: whenDone === "keep" ? "keep" : "linger", lingerMs },
+    waiting,
+  );
 
   if (state.status === "idle") return null;
 
-  // The linger is over: fold into the summary, or hide.
-  const lingerOver = !running && presence === "hidden";
+  // The linger is over: fold into the summary, or hide. A waiting run stays.
+  const lingerOver = !running && !waiting && presence === "hidden";
   if (lingerOver && whenDone === "hide") return null;
   const view = lingerOver && whenDone === "collapse" ? "summary" : "steps";
 

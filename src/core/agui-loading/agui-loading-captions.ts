@@ -1,6 +1,12 @@
 import { EventType } from "./agui-loading-machine";
 
 export const DEFAULT_LOADING_TEXTS_KEY = "default";
+export const WAITING_LOADING_TEXTS_KEY = "waiting";
+export const STOPPED_LOADING_TEXTS_KEY = "stopped";
+
+export type AGUILoadingStatusKey =
+  | typeof WAITING_LOADING_TEXTS_KEY
+  | typeof STOPPED_LOADING_TEXTS_KEY;
 
 // -----
 // TEvent defaults to the real @ag-ui/core EventType,
@@ -15,7 +21,7 @@ export const DEFAULT_LOADING_TEXTS_KEY = "default";
 // ask for it.
 // -----
 export type AGUILoadingTextsByEvent<TEvent extends string = EventType> = Partial<
-  Record<TEvent | typeof DEFAULT_LOADING_TEXTS_KEY, readonly string[]>
+  Record<TEvent | AGUILoadingStatusKey | typeof DEFAULT_LOADING_TEXTS_KEY, readonly string[]>
 >;
 
 // -----
@@ -247,6 +253,20 @@ export const LOADING_TEXTS_BY_EVENT = {
     "Finalizing",
     "Polishing off",
   ],
+  [WAITING_LOADING_TEXTS_KEY]: [
+    "Waiting",
+    "Idling",
+    "Standing by",
+    "Holding",
+    "Paused",
+  ],
+  [STOPPED_LOADING_TEXTS_KEY]: [
+    "Stopped",
+    "Halted",
+    "Called off",
+    "Cut short",
+    "Ended early",
+  ],
   [DEFAULT_LOADING_TEXTS_KEY]: [
     "Working",
     "Processing",
@@ -255,7 +275,7 @@ export const LOADING_TEXTS_BY_EVENT = {
     "In progress",
   ],
 } satisfies Record<
-  EventType | typeof DEFAULT_LOADING_TEXTS_KEY,
+  EventType | AGUILoadingStatusKey | typeof DEFAULT_LOADING_TEXTS_KEY,
   readonly string[]
 >;
 
@@ -266,7 +286,7 @@ export const LOADING_TEXTS_BY_EVENT = {
 // only relaxes the lookup, not what's actually in the map.
 // -----
 export function textsForEventType<TEvent extends string>(
-  eventType: TEvent | null,
+  eventType: TEvent | AGUILoadingStatusKey | null,
   overrides: AGUILoadingTextsByEvent<TEvent> | undefined,
 ): readonly string[] {
   const key = eventType ?? DEFAULT_LOADING_TEXTS_KEY;

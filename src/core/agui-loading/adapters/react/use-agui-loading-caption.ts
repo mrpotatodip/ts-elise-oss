@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   createAGUILoadingCaptionRotator,
+  type AGUILoadingStatusKey,
   type AGUILoadingTextsByEvent,
   type EventType,
 } from "../..";
 
 export type UseAGUILoadingCaptionOptions<TEvent extends string = EventType> = {
   active: boolean;
-  eventType: TEvent | null;
+  eventType: TEvent | AGUILoadingStatusKey | null;
   rotateEvery?: number;
   textsByEvent?: AGUILoadingTextsByEvent<TEvent>;
 };

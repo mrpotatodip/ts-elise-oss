@@ -14,3 +14,7 @@ export {
   AGUILoadingEvent,
   type AGUILoadingEventProps,
 } from "./agui-loading-event";
+export {
+  AGUILoadingSubagent,
+  type AGUILoadingSubagentProps,
+} from "./agui-loading-subagent";

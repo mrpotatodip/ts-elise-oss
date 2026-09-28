@@ -54,8 +54,10 @@ export function AGUILoadingDocsLoadingStackedExample() {
       title="<AGUILoadingStacked />"
       description="The stacked loader, built from parts. Write one row; it repeats for each step. The parts have no colors: style rows with data-status and data-kind."
       status={state.lastEventType ?? state.status}
-      onPlay={() => play("two-tool-calls")}
-      onPlayError={() => play("mid-stream-error")}
+      plays={[
+        { label: "Run", onClick: () => play("two-tool-calls") },
+        { label: "Error", onClick: () => play("mid-stream-error") },
+      ]}
       onReset={reset}
       source={source}
     >

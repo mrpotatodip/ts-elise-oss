@@ -23,3 +23,6 @@ dist/
 # Local agent skills
 .agents/
 .claude/
+
+# Personal learning workspaces
+learn/

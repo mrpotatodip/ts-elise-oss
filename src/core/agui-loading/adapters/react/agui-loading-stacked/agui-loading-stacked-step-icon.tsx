@@ -3,6 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { stackedStepValue, type AGUILoadingStackedByEvent } from "../../..";
 import { cn } from "../cn";
 
+import { AGUI_LOADING_WAITING_ICON } from "../agui-loading-waiting-icon";
 import { useAGUILoadingStackedStep } from "./agui-loading-stacked-steps";
 
 // -----
@@ -46,20 +47,25 @@ export type AGUILoadingStackedStepIconProps = Omit<ComponentProps<"span">, "chil
   doneByEvent?: AGUILoadingStackedByEvent<ReactNode>;
   // When the row failed.
   failedByEvent?: AGUILoadingStackedByEvent<ReactNode>;
-  // Icons for rows with no entry. Defaults: spinner, check, "!" circle.
+  // While the row waits for input.
+  waitingByEvent?: AGUILoadingStackedByEvent<ReactNode>;
+  // Icons for rows with no entry. Defaults: spinner, check, "!" circle, pause circle.
   busyFallback?: ReactNode;
   doneFallback?: ReactNode;
   failedFallback?: ReactNode;
+  waitingFallback?: ReactNode;
 };
 
-// The icon for this row. It changes when the row finishes or fails.
+// The icon for this row. It changes when the row waits, finishes or fails.
 export function AGUILoadingStackedStepIcon({
   busyByEvent,
   doneByEvent,
   failedByEvent,
+  waitingByEvent,
   busyFallback = BUSY_ICON,
   doneFallback = DONE_ICON,
   failedFallback = FAILED_ICON,
+  waitingFallback = AGUI_LOADING_WAITING_ICON,
   className,
   ...props
 }: AGUILoadingStackedStepIconProps) {
@@ -70,7 +76,9 @@ export function AGUILoadingStackedStepIcon({
       ? [doneByEvent, doneFallback]
       : step.status === "failed"
         ? [failedByEvent, failedFallback]
-        : [busyByEvent, busyFallback];
+        : step.status === "waiting"
+          ? [waitingByEvent, waitingFallback]
+          : [busyByEvent, busyFallback];
   const icon = stackedStepValue(step, byEvent);
 
   return (

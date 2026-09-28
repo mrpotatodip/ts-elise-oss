@@ -13,3 +13,8 @@ export type AGUILoadingDocsScenario = {
   watchFor: string;
   steps: AGUILoadingDocsScenarioStep[];
 };
+
+export type AGUILoadingDocsPlay = {
+  label: string;
+  onClick: () => void;
+};

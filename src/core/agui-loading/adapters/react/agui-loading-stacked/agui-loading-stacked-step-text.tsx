@@ -4,6 +4,7 @@ import {
   STACKED_STEP_START_EVENT,
   stackedStepBusyTexts,
   stackedStepSettledText,
+  stackedStepWaitingTexts,
   TEXT_ANIMATION_ROTATE_MS,
   type AGUILoadingStackedByEvent,
   type AGUILoadingTextAnimation,
@@ -27,6 +28,8 @@ export type AGUILoadingStackedStepTextProps = Omit<ComponentProps<"span">, "chil
   doneByEvent?: AGUILoadingStackedByEvent<string>;
   // Text when the row failed.
   failedByEvent?: AGUILoadingStackedByEvent<string>;
+  // Phrases that rotate while the row waits for input.
+  waitingByEvent?: AGUILoadingStackedByEvent<readonly string[]>;
   // How the text changes: "slide-up" (default), "slide-down",
   // "slide-left", "slide-right", "typing" or "shuffle".
   animation?: AGUILoadingTextAnimation;
@@ -35,27 +38,32 @@ export type AGUILoadingStackedStepTextProps = Omit<ComponentProps<"span">, "chil
 };
 
 // -----
-// The text for this row. It rotates while the row
-// works, then changes to the done or failed text.
-// Screen readers hear one phrase, not each change.
+// Rotates while the row works or waits, then shows
+// its done or failed text. Spoken once, not per change.
 // -----
 export function AGUILoadingStackedStepText({
   busyByEvent,
   doneByEvent,
   failedByEvent,
+  waitingByEvent,
   animation = "slide-up",
   rotateEvery,
   ...props
 }: AGUILoadingStackedStepTextProps) {
   const step = useAGUILoadingStackedStep("AGUILoadingStackedStepText");
   const openingEvent = STACKED_STEP_START_EVENT[step.kind];
-  const busyTexts = stackedStepBusyTexts(step, busyByEvent);
+  const waiting = step.status === "waiting";
+  const busyTexts = waiting
+    ? stackedStepWaitingTexts(step, waitingByEvent)
+    : stackedStepBusyTexts(step, busyByEvent);
+  // A new key starts a new deck when the row starts or stops waiting.
+  const captionKey = waiting ? "waiting" : openingEvent;
 
   const rotating = useAGUILoadingCaption({
-    active: step.status === "active",
-    eventType: openingEvent,
+    active: step.status === "active" || waiting,
+    eventType: captionKey,
     rotateEvery: rotateEvery ?? TEXT_ANIMATION_ROTATE_MS[animation],
-    textsByEvent: { [openingEvent]: busyTexts },
+    textsByEvent: { [captionKey]: busyTexts },
   });
   const settled = stackedStepSettledText(step, {
     doneTextsByEvent: doneByEvent,

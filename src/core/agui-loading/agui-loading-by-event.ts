@@ -1,4 +1,4 @@
-import { DEFAULT_LOADING_TEXTS_KEY } from "./agui-loading-captions";
+import { DEFAULT_LOADING_TEXTS_KEY, type AGUILoadingStatusKey } from "./agui-loading-captions";
 import type { EventType } from "./agui-loading-machine";
 
 // -----
@@ -9,7 +9,7 @@ import type { EventType } from "./agui-loading-machine";
 // a Vue component, a class name); core never looks inside.
 // -----
 export type AGUILoadingByEvent<TValue, TEvent extends string = EventType> = Partial<
-  Record<TEvent | typeof DEFAULT_LOADING_TEXTS_KEY, TValue>
+  Record<TEvent | AGUILoadingStatusKey | typeof DEFAULT_LOADING_TEXTS_KEY, TValue>
 >;
 
 // -----
@@ -20,7 +20,7 @@ export type AGUILoadingByEvent<TValue, TEvent extends string = EventType> = Part
 // instead of it silently falling through.
 // -----
 export function valueForEventType<TValue, TEvent extends string = EventType>(
-  eventType: TEvent | null,
+  eventType: TEvent | AGUILoadingStatusKey | null,
   byEvent: AGUILoadingByEvent<TValue, TEvent> | undefined,
 ): TValue | undefined {
   if (!byEvent) return undefined;
