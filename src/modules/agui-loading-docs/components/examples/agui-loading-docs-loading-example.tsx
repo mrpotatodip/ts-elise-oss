@@ -5,7 +5,6 @@ import {
   AGUILoading,
   AGUILoadingEvent,
   AGUILoadingIcon,
-  AGUILoadingSubagent,
   AGUILoadingText,
 } from "@/core/agui-loading/adapters/react";
 import {
@@ -15,7 +14,6 @@ import {
 } from "@/core/agui-loading";
 
 import { useAGUILoadingDocsReplay } from "../../hooks";
-import { aguiLoadingDocsPlays } from "../../utils";
 import { AGUILoadingDocsCard } from "../agui-loading-docs-card";
 import source from "./agui-loading-docs-loading-example.tsx?raw";
 
@@ -46,7 +44,7 @@ export function AGUILoadingDocsLoadingExample() {
   // receive. Here the docs send fake events for you
   // when you press "Play".
   // -----
-  const { state, play, playNext, reset } = useAGUILoadingDocsReplay(
+  const { state, play, reset } = useAGUILoadingDocsReplay(
     aguiLoadingReducer,
     initialAGUILoadingState,
   );
@@ -57,12 +55,10 @@ export function AGUILoadingDocsLoadingExample() {
       title="<AGUILoading />"
       description="The same loader, built from parts. Put the parts in any order, leave some out, and add your own elements."
       status={state.lastEventType ?? state.status}
-      plays={aguiLoadingDocsPlays({
-        status: state.status,
-        runScenarioId: "happy-path",
-        play,
-        playNext,
-      })}
+      plays={[
+        { label: "Run", onClick: () => play("happy-path") },
+        { label: "Error", onClick: () => play("mid-stream-error") },
+      ]}
       onReset={reset}
       source={source}
     >
@@ -72,17 +68,10 @@ export function AGUILoadingDocsLoadingExample() {
         active={running}
         // Required. The most recent event.
         eventType={state.lastEventType}
-        // true while the run waits for input, e.g. an approval.
-        // The loader stays on screen until the next run.
-        waiting={state.status === "waiting"}
-        // true when the run was cancelled. Shows the "stopped" text.
-        stopped={state.status === "stopped"}
-        // The subagent behind the latest event, for <AGUILoadingSubagent />.
-        subagent={state.subagentName}
         // What happens when the agent finishes: "linger", "hide" or "keep".
         whenDone="keep"
-        // Style each state with data-presence: running, waiting, lingering or done.
-        className="group text-sm text-muted-foreground data-[presence=done]:opacity-60 data-[presence=waiting]:text-amber-600"
+        // Style each state with data-presence: running, lingering or done.
+        className="group text-sm text-muted-foreground data-[presence=done]:opacity-60"
       >
         {/* Icon first. Events you don't list show the fallback spinner. */}
         <AGUILoadingIcon
@@ -104,9 +93,6 @@ export function AGUILoadingDocsLoadingExample() {
           <ElapsedTime running={running} />
         </span>
 
-        {/* The subagent's name, e.g. "researcher ·". Nothing while the parent works. */}
-        <AGUILoadingSubagent className="font-medium text-foreground/80" />
-
         {/* Then the text. Add "..." yourself if you want it. */}
         <AGUILoadingText
           animation="slide-up"
@@ -116,9 +102,6 @@ export function AGUILoadingDocsLoadingExample() {
             [EventType.TEXT_MESSAGE_CONTENT]: ["Writing your digest..."],
             [EventType.RUN_FINISHED]: ["Done"],
             [EventType.RUN_ERROR]: ["Something went wrong"],
-            [EventType.SUBAGENT_STARTED]: ["Handing off..."],
-            // "waiting" and "stopped" are keys too, like "default".
-            waiting: ["Waiting for your approval...", "Standing by..."],
             default: ["Working on it..."],
           }}
         />

@@ -11,7 +11,6 @@ import {
   AGUILoadingStackedEarlier,
   AGUILoadingStackedStepIcon,
   AGUILoadingStackedSteps,
-  AGUILoadingStackedStepSubagent,
   AGUILoadingStackedStepText,
   AGUILoadingStackedSummaryDone,
   AGUILoadingStackedSummaryFailed,
@@ -23,7 +22,6 @@ import {
 } from "@/core/agui-loading";
 
 import { useAGUILoadingDocsReplay } from "../../hooks";
-import { aguiLoadingDocsPlays } from "../../utils";
 import { AGUILoadingDocsCard } from "../agui-loading-docs-card";
 import source from "./agui-loading-docs-loading-stacked-example.tsx?raw";
 
@@ -46,7 +44,7 @@ export function AGUILoadingDocsLoadingStackedExample() {
   // receive. Here the docs send fake events for you
   // when you press "Play".
   // -----
-  const { state, play, playNext, reset } = useAGUILoadingDocsReplay(
+  const { state, play, reset } = useAGUILoadingDocsReplay(
     aguiLoadingStackedReducer,
     initialAGUILoadingStackedState,
   );
@@ -56,12 +54,10 @@ export function AGUILoadingDocsLoadingStackedExample() {
       title="<AGUILoadingStacked />"
       description="The stacked loader, built from parts. Write one row; it repeats for each step. The parts have no colors: style rows with data-status and data-kind."
       status={state.lastEventType ?? state.status}
-      plays={aguiLoadingDocsPlays({
-        status: state.status,
-        runScenarioId: "two-tool-calls",
-        play,
-        playNext,
-      })}
+      plays={[
+        { label: "Run", onClick: () => play("two-tool-calls") },
+        { label: "Error", onClick: () => play("mid-stream-error") },
+      ]}
       onReset={reset}
       source={source}
     >
@@ -85,19 +81,16 @@ export function AGUILoadingDocsLoadingStackedExample() {
 
         {/* -----
             One row. Write it one time; it repeats for each step.
-            Each row has attributes you can style with:
-              data-status:   active, waiting, done or failed
-              data-kind:     run, tool, message, reasoning, subagent or error
-              data-subagent: set on rows that belong to a subagent
-            Here, a subagent's rows are indented.
+            Each row has two attributes you can style with:
+              data-status: active, done or failed
+              data-kind:   run, tool, message, reasoning or error
             ----- */}
-        <AGUILoadingStackedSteps rowClassName="group/row data-[subagent]:pl-5 data-[status=done]:text-foreground/60 data-[status=failed]:text-destructive data-[status=waiting]:text-amber-600">
+        <AGUILoadingStackedSteps rowClassName="group/row data-[status=done]:text-foreground/60 data-[status=failed]:text-destructive">
           {/* -----
               The icon. Pick one per event that started the row.
               busyByEvent: while the row works
-              waitingByEvent: while the row waits for input
               doneByEvent / failedByEvent: when it ends
-              Rows you don't list show a spinner, a pause, a check or "!".
+              Rows you don't list show a spinner, a check or "!".
               ----- */}
           <AGUILoadingStackedStepIcon
             className="group-data-[status=done]/row:text-emerald-500"
@@ -112,13 +105,9 @@ export function AGUILoadingDocsLoadingStackedExample() {
             }}
           />
 
-          {/* The subagent a row belongs to, e.g. "researcher ·". */}
-          <AGUILoadingStackedStepSubagent className="text-foreground/40" />
-
           {/* -----
               The text. Same keys as the icon.
               busyByEvent: phrases that change while the row works
-              waitingByEvent: phrases while the row waits for input
               doneByEvent: the text when the row is finished
               Rows you don't list show the built-in text.
               ----- */}
@@ -128,11 +117,6 @@ export function AGUILoadingDocsLoadingStackedExample() {
                 `Calling ${step.toolCallName}...`,
               ],
               [EventType.TEXT_MESSAGE_START]: ["Writing your answer..."],
-            }}
-            waitingByEvent={{
-              [EventType.TOOL_CALL_START]: (step) => [
-                `Approve ${step.toolCallName}?`,
-              ],
             }}
             doneByEvent={{
               [EventType.RUN_STARTED]: "Connected",
