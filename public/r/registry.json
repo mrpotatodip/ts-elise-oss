@@ -1,0 +1,166 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "elise",
+  "homepage": "https://github.com/mrpotatodip/ts-elise-oss",
+  "items": [
+    {
+      "name": "agui-loading",
+      "type": "registry:block",
+      "title": "AG-UI Loading",
+      "description": "Loading indicators driven by AG-UI events: AGUILoading (one line) and AGUILoadingStacked (one row per step).",
+      "dependencies": [
+        "@ag-ui/core",
+        "motion",
+        "clsx",
+        "tailwind-merge"
+      ],
+      "files": [
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-earlier.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-earlier.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-step-icon.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-step-icon.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-step-text.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-step-text.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-steps.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-steps.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-summary.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked-summary.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading-stacked/agui-loading-stacked.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading-stacked/index.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading-stacked/index.ts"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading/agui-loading-event.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading/agui-loading-event.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading/agui-loading-icon.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading/agui-loading-icon.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading/agui-loading-text.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading/agui-loading-text.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading/agui-loading.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading/agui-loading.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/agui-loading/index.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/agui-loading/index.ts"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/animation/agui-loading-caption-text-components.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/animation/agui-loading-caption-text-components.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/animation/agui-loading-caption-text-shuffle.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/animation/agui-loading-caption-text-shuffle.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/animation/agui-loading-caption-text-slide-fade.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/animation/agui-loading-caption-text-slide-fade.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/animation/agui-loading-caption-text-typing.tsx",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/animation/agui-loading-caption-text-typing.tsx"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/cn.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/cn.ts"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/index.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/index.ts"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/use-agui-loading-caption.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/use-agui-loading-caption.ts"
+        },
+        {
+          "path": "src/core/agui-loading/adapters/react/use-agui-loading-presence.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/adapters/react/use-agui-loading-presence.ts"
+        },
+        {
+          "path": "src/core/agui-loading/agui-loading-animations.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/agui-loading-animations.ts"
+        },
+        {
+          "path": "src/core/agui-loading/agui-loading-by-event.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/agui-loading-by-event.ts"
+        },
+        {
+          "path": "src/core/agui-loading/agui-loading-caption-rotator.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/agui-loading-caption-rotator.ts"
+        },
+        {
+          "path": "src/core/agui-loading/agui-loading-captions.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/agui-loading-captions.ts"
+        },
+        {
+          "path": "src/core/agui-loading/agui-loading-machine.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/agui-loading-machine.ts"
+        },
+        {
+          "path": "src/core/agui-loading/agui-loading-presence.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/agui-loading-presence.ts"
+        },
+        {
+          "path": "src/core/agui-loading/agui-loading-stacked-captions.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/agui-loading-stacked-captions.ts"
+        },
+        {
+          "path": "src/core/agui-loading/agui-loading-stacked-machine.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/agui-loading-stacked-machine.ts"
+        },
+        {
+          "path": "src/core/agui-loading/index.ts",
+          "type": "registry:file",
+          "target": "@components/agui-loading/index.ts"
+        }
+      ]
+    }
+  ]
+}

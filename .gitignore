@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.output/
+
+# Framework and tool caches
+.tanstack/
+.wrangler/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# OS files
+.DS_Store
+
+# Local agent skills
+.agents/
+.claude/
