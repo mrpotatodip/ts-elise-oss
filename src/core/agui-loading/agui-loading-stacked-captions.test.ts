@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  stackedStepWaitingTexts,
   stackedStepBusyTexts,
   stackedStepSettledText,
   stackedStepValue,
@@ -18,6 +19,10 @@ const tool: AGUILoadingStackedStep = {
   eventType: EventType.TOOL_CALL_RESULT,
   toolCallName: "search",
   errorMessage: null,
+  subagentRunId: null,
+  subagentName: null,
+  parentSubagentRunId: null,
+  failReason: null,
 };
 
 describe("stackedStepSettledText", () => {
@@ -56,6 +61,10 @@ describe("stackedStepSettledText", () => {
       eventType: EventType.RUN_ERROR,
       toolCallName: null,
       errorMessage: "Upstream timed out",
+      subagentRunId: null,
+      subagentName: null,
+      parentSubagentRunId: null,
+      failReason: null,
     };
     expect(stackedStepSettledText(error)).toBe("Upstream timed out");
     expect(
@@ -121,5 +130,93 @@ describe("stackedSummaryText", () => {
     const base = { ...initialAGUILoadingStackedState, stepOrder: ["run", "tool:a"] };
     expect(stackedSummaryText({ ...base, status: "done" })).toBe("Finished · 2 steps");
     expect(stackedSummaryText({ ...base, status: "failed", stepOrder: ["run"] })).toBe("Stopped · 1 step");
+  });
+});
+
+const researcher: AGUILoadingStackedStep = {
+  ...tool,
+  id: "subagent:sub-1",
+  kind: "subagent",
+  status: "active",
+  eventType: EventType.SUBAGENT_STARTED,
+  toolCallName: null,
+  subagentRunId: "sub-1",
+  subagentName: "researcher",
+};
+
+describe("subagent rows", () => {
+  it("names the subagent while it works", () => {
+    expect(stackedStepBusyTexts(researcher, undefined)).toContain("Delegating to researcher");
+  });
+
+  it("uses the built-in delegating captions when the subagent has no name", () => {
+    expect(stackedStepBusyTexts({ ...researcher, subagentName: null }, undefined)).toEqual(
+      LOADING_TEXTS_BY_EVENT[EventType.SUBAGENT_STARTED],
+    );
+  });
+
+  it("names the subagent when it's done or failed", () => {
+    expect(stackedStepSettledText({ ...researcher, status: "done" })).toBe("Asked researcher");
+    expect(stackedStepSettledText({ ...researcher, status: "failed" })).toBe("researcher failed");
+    expect(
+      stackedStepSettledText({ ...researcher, status: "failed", errorMessage: "Rate limited" }),
+    ).toBe("Rate limited");
+  });
+
+  it("takes overrides keyed by SUBAGENT_STARTED", () => {
+    expect(
+      stackedStepSettledText(
+        { ...researcher, status: "done" },
+        { doneTextsByEvent: { [EventType.SUBAGENT_STARTED]: (s) => `${s.subagentName} is back` } },
+      ),
+    ).toBe("researcher is back");
+  });
+});
+
+describe("waiting rows", () => {
+  it("has no settled text while it waits", () => {
+    expect(stackedStepSettledText({ ...tool, status: "waiting" })).toBeNull();
+  });
+
+  it("names the tool or subagent that waits", () => {
+    expect(stackedStepWaitingTexts({ ...tool, status: "waiting" }, undefined)).toContain(
+      "search is waiting",
+    );
+    expect(stackedStepWaitingTexts({ ...researcher, status: "waiting" }, undefined)).toContain(
+      "researcher is waiting",
+    );
+  });
+
+  it("falls back to the waiting captions for a row with no name", () => {
+    const message = { ...tool, kind: "message" as const, toolCallName: null, status: "waiting" as const };
+    expect(stackedStepWaitingTexts(message, undefined)).toEqual(LOADING_TEXTS_BY_EVENT.waiting);
+  });
+
+  it("uses your waiting texts keyed by the opening event", () => {
+    const texts = { [EventType.TOOL_CALL_START]: (s: AGUILoadingStackedStep) => [`Approve ${s.toolCallName}?`] };
+    expect(stackedStepWaitingTexts({ ...tool, status: "waiting" }, texts)).toEqual(["Approve search?"]);
+  });
+});
+
+describe("stopped and cancelled rows", () => {
+  it("says why the row failed", () => {
+    expect(stackedStepSettledText({ ...tool, status: "failed", failReason: "stopped" })).toBe("Stopped");
+    expect(stackedStepSettledText({ ...tool, status: "failed", failReason: "cancelled" })).toBe(
+      "Cancelled",
+    );
+  });
+
+  it("still prefers your failed text", () => {
+    expect(
+      stackedStepSettledText(
+        { ...tool, status: "failed", failReason: "stopped" },
+        { failedTextsByEvent: { default: "Nope" } },
+      ),
+    ).toBe("Nope");
+  });
+
+  it("summarizes a stopped run", () => {
+    const base = { ...initialAGUILoadingStackedState, stepOrder: ["run", "tool:a"] };
+    expect(stackedSummaryText({ ...base, status: "stopped" })).toBe("Stopped · 2 steps");
   });
 });

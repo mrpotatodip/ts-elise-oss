@@ -15,18 +15,61 @@ import { EventType } from "@ag-ui/core";
 // -----
 export { EventType };
 
-export type AGUILoadingStreamEvent =
-  | { type: EventType.RUN_STARTED; runId: string }
-  | { type: EventType.TEXT_MESSAGE_START; messageId: string; role: string }
-  | { type: EventType.TEXT_MESSAGE_CONTENT; messageId: string; delta: string }
-  | { type: EventType.TEXT_MESSAGE_END; messageId: string }
-  | { type: EventType.TOOL_CALL_START; toolCallId: string; toolCallName: string }
-  | { type: EventType.TOOL_CALL_RESULT; toolCallId: string; content: string }
-  | { type: EventType.TOOL_CALL_END; toolCallId: string }
-  | { type: EventType.RUN_FINISHED; runId: string }
-  | { type: EventType.RUN_ERROR; message: string; code?: string };
+type SubagentTag = { subagentRunId?: string };
 
-export type LoadingStatus = "idle" | "running" | "done" | "failed";
+export type AGUILoadingInterrupt = {
+  id: string;
+  subagentRunId?: string;
+  toolCallId?: string;
+  message?: string;
+};
+
+export type AGUILoadingResumeEntry = {
+  interruptId: string;
+  status: "resolved" | "cancelled";
+};
+
+export type AGUILoadingRunOutcome =
+  | { type: "success"; pendingToolCallIds?: string[] }
+  | { type: "interrupt"; interrupts: AGUILoadingInterrupt[] }
+  | { type: "cancelled" };
+
+export type AGUILoadingSubagentOutcome =
+  | { type: "success" }
+  | { type: "suspended"; interruptIds?: string[] };
+
+export type AGUILoadingStreamEvent =
+  | {
+      type: EventType.RUN_STARTED;
+      runId: string;
+      threadId?: string;
+      parentRunId?: string;
+      input?: { resume?: AGUILoadingResumeEntry[] };
+    }
+  | ({ type: EventType.TEXT_MESSAGE_START; messageId: string; role: string } & SubagentTag)
+  | ({ type: EventType.TEXT_MESSAGE_CONTENT; messageId: string; delta: string } & SubagentTag)
+  | ({ type: EventType.TEXT_MESSAGE_END; messageId: string } & SubagentTag)
+  | ({ type: EventType.TOOL_CALL_START; toolCallId: string; toolCallName: string } & SubagentTag)
+  | ({ type: EventType.TOOL_CALL_RESULT; toolCallId: string; content: string } & SubagentTag)
+  | ({ type: EventType.TOOL_CALL_END; toolCallId: string } & SubagentTag)
+  | { type: EventType.RUN_FINISHED; runId: string; outcome?: AGUILoadingRunOutcome }
+  | { type: EventType.RUN_ERROR; message: string; code?: string }
+  | {
+      type: EventType.SUBAGENT_STARTED;
+      subagentRunId: string;
+      name: string;
+      description?: string;
+      parentSubagentRunId?: string;
+      parentToolCallId?: string;
+    }
+  | {
+      type: EventType.SUBAGENT_FINISHED;
+      subagentRunId: string;
+      outcome?: AGUILoadingSubagentOutcome;
+    }
+  | { type: EventType.SUBAGENT_ERROR; subagentRunId: string; message: string; code?: string };
+
+export type LoadingStatus = "idle" | "running" | "waiting" | "done" | "failed" | "stopped";
 
 export type LoadingMessage = {
   role: string;
@@ -48,6 +91,9 @@ export type AGUILoadingState = {
   toolCalls: Record<string, LoadingToolCall>;
   toolCallOrder: string[];
   error: { message: string; code?: string } | null;
+  subagentName: string | null;
+  subagentNames: Record<string, string>;
+  interruptIds: string[];
 };
 
 export const initialAGUILoadingState: AGUILoadingState = {
@@ -59,6 +105,9 @@ export const initialAGUILoadingState: AGUILoadingState = {
   toolCalls: {},
   toolCallOrder: [],
   error: null,
+  subagentName: null,
+  subagentNames: {},
+  interruptIds: [],
 };
 
 // -----
@@ -71,23 +120,91 @@ export const initialAGUILoadingState: AGUILoadingState = {
 // unconditionally, no matter what came before.
 // -----
 function isTerminal(state: AGUILoadingState): boolean {
-  return state.status === "done" || state.status === "failed";
+  return state.status === "done" || state.status === "failed" || state.status === "stopped";
 }
 
+type RunStartedEvent = Extract<AGUILoadingStreamEvent, { type: EventType.RUN_STARTED }>;
+
+// -----
+// A resume entry for one of our interrupts, else
+// (no input echoed) parentRunId naming our run.
+// -----
+export function continuesWaitingRun(
+  waiting: { status: LoadingStatus; runId: string | null; interruptIds: string[] },
+  event: RunStartedEvent,
+): boolean {
+  if (waiting.status !== "waiting") return false;
+  const resume = event.input?.resume;
+  if (resume) return resume.some((entry) => waiting.interruptIds.includes(entry.interruptId));
+  return event.parentRunId !== undefined && event.parentRunId === waiting.runId;
+}
+
+// -----
+// Name of the subagent that owns the event: its
+// tag's name, or null for the parent's own events.
+// -----
+function ownerName(state: AGUILoadingState, event: AGUILoadingStreamEvent): string | null {
+  const id = "subagentRunId" in event ? event.subagentRunId : undefined;
+  return id === undefined ? null : (state.subagentNames[id] ?? null);
+}
+
+// -----
+// Only a new run gets past a waiting one. Other
+// events name their owner in subagentName.
+// -----
 export function aguiLoadingReducer(
   state: AGUILoadingState,
   event: AGUILoadingStreamEvent,
 ): AGUILoadingState {
   if (isTerminal(state)) return state;
+  if (state.status === "waiting" && event.type !== EventType.RUN_STARTED) return state;
 
+  const next = reduceStreamEvent(state, event);
+  if (event.type === EventType.RUN_STARTED || next.status === "waiting") return next;
+  // -----
+  // An ended run, or a subagent that succeeded, hands
+  // the line back to the parent: no name.
+  // -----
+  const handsBack =
+    event.type === EventType.RUN_FINISHED ||
+    event.type === EventType.RUN_ERROR ||
+    (event.type === EventType.SUBAGENT_FINISHED && event.outcome?.type !== "suspended");
+  return { ...next, subagentName: handsBack ? null : ownerName(next, event) };
+}
+
+function reduceStreamEvent(
+  state: AGUILoadingState,
+  event: AGUILoadingStreamEvent,
+): AGUILoadingState {
   switch (event.type) {
     case EventType.RUN_STARTED:
+      if (continuesWaitingRun(state, event)) {
+        return {
+          ...state,
+          status: "running",
+          runId: event.runId,
+          lastEventType: event.type,
+          interruptIds: [],
+          subagentName: null,
+        };
+      }
       return {
         ...initialAGUILoadingState,
         status: "running",
         runId: event.runId,
         lastEventType: event.type,
       };
+
+    case EventType.SUBAGENT_STARTED:
+      return {
+        ...state,
+        lastEventType: event.type,
+        subagentNames: { ...state.subagentNames, [event.subagentRunId]: event.name },
+      };
+
+    case EventType.SUBAGENT_FINISHED:
+    case EventType.SUBAGENT_ERROR:
+      return { ...state, lastEventType: event.type };
 
     case EventType.TEXT_MESSAGE_START: {
       if (state.messages[event.messageId]) {
@@ -186,12 +303,25 @@ export function aguiLoadingReducer(
     case EventType.TOOL_CALL_END:
       return { ...state, lastEventType: event.type };
 
-    case EventType.RUN_FINISHED:
+    case EventType.RUN_FINISHED: {
       // -----
-      // Completion is the protocol's own signal, not a
-      // regex scraped off accumulated JSON text.
+      // Completion is the protocol's own signal. An
+      // interrupt waits for input; cancelled stops.
       // -----
-      return { ...state, status: "done", lastEventType: event.type };
+      const outcome = event.outcome;
+      if (outcome?.type === "interrupt") {
+        const waitingSubagent = outcome.interrupts.find((i) => i.subagentRunId)?.subagentRunId;
+        return {
+          ...state,
+          status: "waiting",
+          lastEventType: event.type,
+          interruptIds: outcome.interrupts.map((interrupt) => interrupt.id),
+          subagentName: waitingSubagent ? (state.subagentNames[waitingSubagent] ?? null) : null,
+        };
+      }
+      const status = outcome?.type === "cancelled" ? "stopped" : "done";
+      return { ...state, status, lastEventType: event.type };
+    }
 
     case EventType.RUN_ERROR:
       // -----

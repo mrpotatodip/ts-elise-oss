@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { valueForEventType, type AGUILoadingByEvent } from "./agui-loading-by-event";
+import { textsForEventType } from "./agui-loading-captions";
 import { EventType } from "./agui-loading-machine";
 
 describe("valueForEventType", () => {
@@ -27,5 +28,22 @@ describe("valueForEventType", () => {
     const noDefault: AGUILoadingByEvent<string> = { [EventType.RUN_ERROR]: "x" };
     expect(valueForEventType(EventType.RUN_STARTED, undefined)).toBeUndefined();
     expect(valueForEventType(EventType.RUN_STARTED, noDefault)).toBeUndefined();
+  });
+});
+
+describe("status keys", () => {
+  it("looks up waiting and stopped like any event key", () => {
+    const icons = { waiting: "pause", stopped: "stop", default: "spin" };
+    expect(valueForEventType("waiting", icons)).toBe("pause");
+    expect(valueForEventType("stopped", icons)).toBe("stop");
+  });
+
+  it("has built-in captions for waiting and stopped", () => {
+    expect(textsForEventType("waiting", undefined)).toContain("Waiting");
+    expect(textsForEventType("stopped", undefined)).toContain("Stopped");
+  });
+
+  it("uses your waiting captions before the built-in ones", () => {
+    expect(textsForEventType("waiting", { waiting: ["Your turn"] })).toEqual(["Your turn"]);
   });
 });

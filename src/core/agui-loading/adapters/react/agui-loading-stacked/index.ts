@@ -11,6 +11,10 @@ export {
   type AGUILoadingStackedStepIconProps,
 } from "./agui-loading-stacked-step-icon";
 export {
+  AGUILoadingStackedStepSubagent,
+  type AGUILoadingStackedStepSubagentProps,
+} from "./agui-loading-stacked-step-subagent";
+export {
   AGUILoadingStackedStepText,
   type AGUILoadingStackedStepTextProps,
 } from "./agui-loading-stacked-step-text";

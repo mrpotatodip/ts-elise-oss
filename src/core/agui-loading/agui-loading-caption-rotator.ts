@@ -2,12 +2,13 @@ import type { EventType } from "./agui-loading-machine";
 import {
   shuffle,
   textsForEventType,
+  type AGUILoadingStatusKey,
   type AGUILoadingTextsByEvent,
 } from "./agui-loading-captions";
 
 export type AGUILoadingCaptionRotator<TEvent extends string = EventType> = {
   next: (
-    eventType: TEvent | null,
+    eventType: TEvent | AGUILoadingStatusKey | null,
     textsByEvent?: AGUILoadingTextsByEvent<TEvent>,
   ) => string | null;
 };
@@ -20,7 +21,7 @@ export type AGUILoadingCaptionRotator<TEvent extends string = EventType> = {
 export function createAGUILoadingCaptionRotator<
   TEvent extends string = EventType,
 >(): AGUILoadingCaptionRotator<TEvent> {
-  let deck: { key: TEvent | null; cards: string[] } | null = null;
+  let deck: { key: TEvent | AGUILoadingStatusKey | null; cards: string[] } | null = null;
   let lastText: string | null = null;
 
   return {

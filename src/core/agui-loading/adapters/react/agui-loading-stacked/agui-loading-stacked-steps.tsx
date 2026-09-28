@@ -30,10 +30,8 @@ export type AGUILoadingStackedStepsProps = Omit<ComponentProps<"ol">, "children"
 };
 
 // -----
-// The list of rows, one for each step. Each row gets
-// data-status (active, done, failed) and data-kind
-// (run, tool, message, reasoning, error).
-// Shows nothing after the rows fold into the summary.
+// One row per step, with data-status, data-kind and
+// data-subagent (the subagent the row belongs to).
 // -----
 export function AGUILoadingStackedSteps({
   children,
@@ -53,9 +51,12 @@ export function AGUILoadingStackedSteps({
 
   const rows = visibleIds.map((id) => {
     const step = state.steps[id]!;
+    // A subagent's own row belongs to the subagent that started it.
+    const owner = step.kind === "subagent" ? step.parentSubagentRunId : step.subagentRunId;
     const rowProps = {
       "data-status": step.status,
       "data-kind": step.kind,
+      "data-subagent": owner ?? undefined,
       className: cn("flex items-center gap-2", rowClassName),
     };
     const row = (

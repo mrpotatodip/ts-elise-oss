@@ -16,6 +16,7 @@ import {
   AGUILoadingStackedEarlier,
   AGUILoadingStackedStepIcon,
   AGUILoadingStackedSteps,
+  AGUILoadingStackedStepSubagent,
   AGUILoadingStackedStepText,
   AGUILoadingStackedSummaryDone,
   AGUILoadingStackedSummaryFailed,
@@ -260,5 +261,106 @@ describe("AGUILoadingStackedSummaryDone and SummaryFailed", () => {
   it("shows nothing while the rows are visible", () => {
     render(loader(done, {}, summaries));
     expect(screen.queryByTestId("done")).toBeNull();
+  });
+});
+
+const subagentStart = (id: string, name: string): AGUILoadingStackedEvent => ({
+  type: EventType.SUBAGENT_STARTED,
+  subagentRunId: id,
+  name,
+});
+
+const childTool = (id: string, name: string, subagentRunId: string): AGUILoadingStackedEvent => ({
+  type: EventType.TOOL_CALL_START,
+  toolCallId: id,
+  toolCallName: name,
+  subagentRunId,
+});
+
+const waitingState = stateAfter(
+  started,
+  toolStart("a", "deleteFile"),
+  {
+    type: EventType.RUN_FINISHED,
+    runId: "r1",
+    outcome: { type: "interrupt", interrupts: [{ id: "int-1", toolCallId: "a" }] },
+  },
+);
+
+describe("AGUILoadingStacked waiting", () => {
+  const waitingLoader = (state: AGUILoadingStackedState) =>
+    loader(
+      state,
+      { whenDone: "hide", lingerMs: 0 },
+      <AGUILoadingStackedSteps animate={false}>
+        <AGUILoadingStackedStepIcon data-testid="icon" />
+        <AGUILoadingStackedStepText
+          data-testid="text"
+          waitingByEvent={{ [EventType.TOOL_CALL_START]: ["Approve delete?"] }}
+        />
+      </AGUILoadingStackedSteps>,
+    );
+
+  it("stays on screen while the run waits, whatever whenDone says", () => {
+    const { rerender } = render(waitingLoader(running));
+    rerender(waitingLoader(waitingState));
+    act(() => vi.advanceTimersByTime(60_000));
+
+    const root = screen.getByRole("status");
+    expect(root.dataset.status).toBe("waiting");
+    expect(root.getAttribute("aria-busy")).toBe("false");
+  });
+
+  it("marks the waiting row and rotates its waiting text", () => {
+    render(waitingLoader(waitingState));
+    const row = rows()[1]!;
+    expect(row.dataset.status).toBe("waiting");
+    expect(row.textContent).toContain("Approve delete?");
+  });
+
+  it("shows a still pause icon on the waiting row", () => {
+    render(waitingLoader(waitingState));
+    const icon = screen.getAllByTestId("icon")[1]!;
+    expect(icon.querySelector(".animate-spin")).toBeNull();
+    expect(icon.querySelector("svg")).not.toBeNull();
+  });
+});
+
+describe("AGUILoadingStacked subagents", () => {
+  const withSubagent = stateAfter(
+    started,
+    subagentStart("sub-1", "researcher"),
+    childTool("t1", "search", "sub-1"),
+    { type: EventType.SUBAGENT_FINISHED, subagentRunId: "sub-1" },
+  );
+
+  it("names the subagent on its row when it's done", () => {
+    render(loader(withSubagent));
+    const row = rows()[1]!;
+    expect(row.dataset.kind).toBe("subagent");
+    expect(row.textContent).toContain("Asked researcher");
+  });
+
+  it("marks rows that belong to a subagent with data-subagent", () => {
+    render(loader(withSubagent));
+    const [runRow, subagentRow, toolRow] = rows();
+    expect(runRow!.dataset.subagent).toBeUndefined();
+    expect(subagentRow!.dataset.subagent).toBeUndefined();
+    expect(toolRow!.dataset.subagent).toBe("sub-1");
+  });
+
+  it("shows the owning subagent's name on its rows only", () => {
+    render(
+      loader(
+        withSubagent,
+        {},
+        <AGUILoadingStackedSteps animate={false}>
+          <AGUILoadingStackedStepSubagent data-testid="owner" />
+        </AGUILoadingStackedSteps>,
+      ),
+    );
+    const owners = screen.getAllByTestId("owner");
+    expect(owners).toHaveLength(1);
+    expect(owners[0]!.textContent).toBe("researcher·");
   });
 });

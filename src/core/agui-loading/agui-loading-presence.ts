@@ -9,7 +9,7 @@
 //              next run replaces it
 // -----
 
-export type AGUILoadingPresence = "hidden" | "running" | "lingering" | "done";
+export type AGUILoadingPresence = "hidden" | "running" | "waiting" | "lingering" | "done";
 
 export type AGUILoadingWhenDone = "hide" | "linger" | "keep";
 
@@ -21,19 +21,27 @@ export type AGUILoadingPresenceOptions = {
   lingerMs?: number;
 };
 
-export function initialAGUILoadingPresence(active: boolean): AGUILoadingPresence {
-  return active ? "running" : "hidden";
+export function initialAGUILoadingPresence(
+  active: boolean,
+  waiting = false,
+): AGUILoadingPresence {
+  if (active) return "running";
+  return waiting ? "waiting" : "hidden";
 }
 
-// Only a loader that was actually showing lingers or stays —
-// one that was never running has nothing to wind down from.
+// -----
+// A waiting run stays until the next run, whatever
+// whenDone says. Only a showing loader winds down.
+// -----
 export function presenceOnActiveChange(
   presence: AGUILoadingPresence,
   active: boolean,
   { whenDone = "linger", lingerMs = LINGER_MS }: AGUILoadingPresenceOptions = {},
+  waiting = false,
 ): AGUILoadingPresence {
   if (active) return "running";
-  if (presence !== "running") return presence;
+  if (waiting) return "waiting";
+  if (presence !== "running" && presence !== "waiting") return presence;
   if (whenDone === "keep") return "done";
   if (whenDone === "linger" && lingerMs > 0) return "lingering";
   return "hidden";

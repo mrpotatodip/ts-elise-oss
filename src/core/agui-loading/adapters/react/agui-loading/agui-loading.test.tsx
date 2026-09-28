@@ -9,6 +9,7 @@ import {
   AGUILoading,
   AGUILoadingEvent,
   AGUILoadingIcon,
+  AGUILoadingSubagent,
   AGUILoadingText,
   type AGUILoadingProps,
 } from ".";
@@ -198,5 +199,94 @@ describe("AGUILoadingEvent", () => {
       children: <AGUILoadingEvent data-testid="event" />,
     });
     expect(screen.queryByTestId("event")).toBeNull();
+  });
+});
+
+describe("AGUILoading waiting", () => {
+  const waitingLoader = (active: boolean, waiting: boolean) => (
+    <AGUILoading
+      active={active}
+      waiting={waiting}
+      eventType={active ? EventType.TOOL_CALL_START : EventType.RUN_FINISHED}
+      whenDone="hide"
+    >
+      <AGUILoadingIcon data-testid="icon" />
+      <AGUILoadingText data-testid="text" byEvent={{ waiting: ["Your turn"] }} />
+    </AGUILoading>
+  );
+
+  it("stays on screen while it waits, whatever whenDone says", () => {
+    const { rerender } = render(waitingLoader(true, false));
+    rerender(waitingLoader(false, true));
+
+    act(() => vi.advanceTimersByTime(60_000));
+    const root = screen.getByRole("status");
+    expect(root.dataset.presence).toBe("waiting");
+    expect(root.getAttribute("aria-busy")).toBe("false");
+  });
+
+  it("rotates the waiting captions", () => {
+    render(waitingLoader(false, true));
+    expect(screen.getByTestId("text").textContent).toContain("Your turn");
+  });
+
+  it("shows a still pause icon instead of the spinner", () => {
+    render(waitingLoader(false, true));
+    const icon = screen.getByTestId("icon");
+    expect(icon.querySelector(".animate-spin")).toBeNull();
+    expect(icon.querySelector("svg")).not.toBeNull();
+  });
+
+  it("runs again when the next run starts", () => {
+    const { rerender } = render(waitingLoader(false, true));
+    rerender(waitingLoader(true, false));
+    expect(screen.getByRole("status").dataset.presence).toBe("running");
+  });
+});
+
+describe("AGUILoading stopped", () => {
+  it("shows the stopped caption when the run was cancelled", () => {
+    const stoppedLoader = (active: boolean) => (
+      <AGUILoading active={active} stopped={!active} eventType={EventType.RUN_FINISHED}>
+        <AGUILoadingText data-testid="text" byEvent={{ stopped: ["Stopped by you"] }} />
+      </AGUILoading>
+    );
+    const { rerender } = render(stoppedLoader(true));
+    rerender(stoppedLoader(false));
+    expect(screen.getByTestId("text").textContent).toContain("Stopped by you");
+  });
+});
+
+describe("AGUILoadingSubagent", () => {
+  it("shows the subagent's name with a separator", () => {
+    renderLoading({
+      active: true,
+      eventType: EventType.TOOL_CALL_START,
+      subagent: "researcher",
+      children: <AGUILoadingSubagent data-testid="subagent" />,
+    });
+    const part = screen.getByTestId("subagent");
+    expect(part.textContent).toBe("researcher·");
+    expect(screen.getByText("researcher")).toBeDefined();
+  });
+
+  it("takes your own separator", () => {
+    renderLoading({
+      active: true,
+      eventType: EventType.TOOL_CALL_START,
+      subagent: "researcher",
+      children: <AGUILoadingSubagent data-testid="subagent" separator=":" />,
+    });
+    expect(screen.getByTestId("subagent").textContent).toBe("researcher:");
+  });
+
+  it("shows nothing while the parent works", () => {
+    renderLoading({
+      active: true,
+      eventType: EventType.TOOL_CALL_START,
+      subagent: null,
+      children: <AGUILoadingSubagent data-testid="subagent" />,
+    });
+    expect(screen.queryByTestId("subagent")).toBeNull();
   });
 });

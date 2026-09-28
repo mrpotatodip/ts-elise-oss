@@ -108,14 +108,22 @@ import { aguiLoadingReducer, initialAGUILoadingState } from "@/core/agui-loading
 import {
   AGUILoading,
   AGUILoadingIcon,
+  AGUILoadingSubagent,
   AGUILoadingText,
 } from "@/core/agui-loading/adapters/react";
 
 const [state, dispatch] = useReducer(aguiLoadingReducer, initialAGUILoadingState);
 
 // dispatch(event) for every AG-UI event your stream layer receives, then:
-<AGUILoading active={state.status === "running"} eventType={state.lastEventType}>
+<AGUILoading
+  active={state.status === "running"}
+  eventType={state.lastEventType}
+  waiting={state.status === "waiting"}
+  stopped={state.status === "stopped"}
+  subagent={state.subagentName}
+>
   <AGUILoadingIcon />
+  <AGUILoadingSubagent />
   <AGUILoadingText />
 </AGUILoading>
 ```
@@ -134,6 +142,36 @@ to show the event name. What happens when `active` turns false is set by
 - `"hide"`: disappears as soon as the run ends.
 - `"keep"`: stays on the finish or error caption, icon paused, until the next
   run starts.
+
+### Subagents, approvals and stopped runs
+
+Both loaders follow the AG-UI 1.0 subagent and interrupt rules, so they work
+with TanStack AI subagents and any other spec-following stream.
+
+- **Subagents.** `SUBAGENT_STARTED` / `SUBAGENT_FINISHED` / `SUBAGENT_ERROR`
+  and the `subagentRunId` tag. `<AGUILoadingSubagent />` shows the name of the
+  subagent behind the latest event ("researcher ·"). The stacked loader adds a
+  `subagent` row per subagent, marks each row that belongs to one with
+  `data-subagent`, and `<AGUILoadingStackedStepSubagent />` shows its name. In
+  tool mode the parent's tool call becomes the subagent's row in place. A
+  failed subagent fails only its own rows; the run goes on.
+- **Waiting for input.** A `RUN_FINISHED` with an `interrupt` outcome (or a
+  subagent that suspends) sets `status: "waiting"`. The loader stays on screen
+  until the next run, whatever `whenDone` says, with a still pause icon and
+  rotating "waiting" captions (`byEvent={{ waiting: [...] }}`, or
+  `waitingByEvent` on the stacked parts). A next run that resumes one of the
+  interrupts (`input.resume`, else `parentRunId`) picks the same rows back up;
+  a cancelled interrupt fails its rows.
+- **Stopped.** A `cancelled` outcome sets `status: "stopped"` and shows the
+  "stopped" captions; the stacked loader fails its open rows with "Stopped".
+- A run that stops for a frontend tool (`pendingToolCallIds`) is still
+  treated as done.
+
+**Breaking type changes** if you copied an earlier version: `LoadingStatus`
+gains `"waiting"` and `"stopped"`, stacked rows gain the `"subagent"` kind, the
+`"waiting"` status and the fields `subagentRunId`, `subagentName`,
+`parentSubagentRunId` and `failReason`. TypeScript points at every place to
+update.
 
 ## Status
 

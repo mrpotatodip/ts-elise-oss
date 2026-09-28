@@ -3,6 +3,7 @@ import type { ComponentProps } from "react";
 import {
   TEXT_ANIMATION_ROTATE_MS,
   textsForEventType,
+  type AGUILoadingStatusKey,
   type AGUILoadingTextAnimation,
   type AGUILoadingTextsByEvent,
   type EventType,
@@ -16,7 +17,8 @@ export type AGUILoadingTextProps<TEvent extends string = EventType> = Omit<
   ComponentProps<"span">,
   "children"
 > & {
-  // Phrases to show per event. Unlisted events use the built-in text.
+  // Phrases to show per event, plus "waiting" and "stopped".
+  // Unlisted keys use the built-in text.
   byEvent?: AGUILoadingTextsByEvent<TEvent>;
   // How the text changes: "slide-up" (default), "slide-down",
   // "slide-left", "slide-right", "typing" or "shuffle".
@@ -26,9 +28,8 @@ export type AGUILoadingTextProps<TEvent extends string = EventType> = Omit<
 };
 
 // -----
-// The text for the latest event. It changes every
-// few seconds while the agent works. Screen readers
-// hear it one time for each event, not on each change.
+// Text for the latest event. It rotates while the
+// agent works or waits; screen readers hear it once.
 // -----
 export function AGUILoadingText<TEvent extends string = EventType>({
   byEvent,
@@ -36,14 +37,15 @@ export function AGUILoadingText<TEvent extends string = EventType>({
   rotateEvery,
   ...props
 }: AGUILoadingTextProps<TEvent>) {
-  const { active, eventType } = useAGUILoadingContext("AGUILoadingText");
+  const { active, waiting, captionKey } = useAGUILoadingContext("AGUILoadingText");
+  const key = captionKey as TEvent | AGUILoadingStatusKey | null;
   const text = useAGUILoadingCaption({
-    active,
-    eventType: eventType as TEvent | null,
+    active: active || waiting,
+    eventType: key,
     rotateEvery: rotateEvery ?? TEXT_ANIMATION_ROTATE_MS[animation],
     textsByEvent: byEvent,
   });
-  const spokenText = textsForEventType(eventType as TEvent | null, byEvent)[0];
+  const spokenText = textsForEventType(key, byEvent)[0];
   const CaptionText = AGUI_LOADING_CAPTION_TEXT_COMPONENTS[animation];
 
   return (

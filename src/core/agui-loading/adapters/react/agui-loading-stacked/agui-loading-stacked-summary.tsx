@@ -21,7 +21,9 @@ function AGUILoadingStackedSummary({
 }: AGUILoadingStackedSummaryProps & { part: string; result: "done" | "failed" }) {
   const { state, view } = useAGUILoadingStackedContext(part);
 
-  if (view !== "summary" || state.status !== result) return null;
+  // A stopped run folds into the failed summary.
+  const outcome = state.status === "stopped" ? "failed" : state.status;
+  if (view !== "summary" || outcome !== result) return null;
 
   const summary =
     text === undefined
@@ -56,9 +58,8 @@ export function AGUILoadingStackedSummaryDone(
 }
 
 // -----
-// One line after a failed run folds (whenDone="collapse").
-// Default text: "Stopped · 4 steps". Put an icon
-// in children; it shows before the text.
+// One line after a failed or stopped run folds.
+// Default text: "Stopped · 4 steps".
 // -----
 export function AGUILoadingStackedSummaryFailed(
   props: AGUILoadingStackedSummaryProps,

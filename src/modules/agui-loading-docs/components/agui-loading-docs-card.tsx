@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 import { DocsCodeBlock } from "@/modules/docs";
 
+import type { AGUILoadingDocsPlay } from "../types";
+
 // -----
 // Layout only: title, the live component (children),
 // play buttons, and the example file's own source.
@@ -17,8 +19,7 @@ export function AGUILoadingDocsCard({
   title,
   description,
   status,
-  onPlay,
-  onPlayError,
+  plays,
   onReset,
   source,
   children,
@@ -26,8 +27,7 @@ export function AGUILoadingDocsCard({
   title: string;
   description: string;
   status: string;
-  onPlay: () => void;
-  onPlayError: () => void;
+  plays: AGUILoadingDocsPlay[];
   onReset: () => void;
   source: string;
   children: ReactNode;
@@ -42,12 +42,11 @@ export function AGUILoadingDocsCard({
         <div className="flex min-h-24 flex-col justify-between gap-4 rounded-md border border-dashed border-border p-4">
           {children}
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={onPlay}>
-              <Play /> Play run
-            </Button>
-            <Button size="sm" variant="secondary" onClick={onPlayError}>
-              <Play /> Play error
-            </Button>
+            {plays.map((play) => (
+              <Button key={play.label} size="sm" variant="secondary" onClick={play.onClick}>
+                <Play /> {play.label}
+              </Button>
+            ))}
             <Button size="sm" variant="ghost" onClick={onReset}>
               <RotateCcw /> Reset
             </Button>

@@ -316,4 +316,348 @@ export const AGUI_LOADING_DOCS_SCENARIOS: AGUILoadingDocsScenario[] = [
       },
     ],
   },
+  {
+    id: "subagent",
+    title: "A subagent does the work",
+    description:
+      "A router hands the turn to a researcher subagent. Its tool call and text carry its subagentRunId.",
+    watchFor:
+      "The researcher's name shows next to its work. The parent never answers: the subagent owns the turn.",
+    steps: [
+      {
+        label: "Run starts",
+        note: "RUN_STARTED.",
+        event: { type: EventType.RUN_STARTED, runId: "run-6" },
+      },
+      {
+        label: "Subagent starts",
+        note: "SUBAGENT_STARTED — the router picked the researcher.",
+        event: { type: EventType.SUBAGENT_STARTED, subagentRunId: "sub-1", name: "researcher" },
+      },
+      {
+        label: "Subagent calls a tool",
+        note: "TOOL_CALL_START tagged with subagentRunId sub-1.",
+        event: {
+          type: EventType.TOOL_CALL_START,
+          toolCallId: "call-1",
+          toolCallName: "searchChannels",
+          subagentRunId: "sub-1",
+        },
+      },
+      {
+        label: "Tool returns",
+        note: "TOOL_CALL_RESULT, tagged.",
+        event: {
+          type: EventType.TOOL_CALL_RESULT,
+          toolCallId: "call-1",
+          content: "2 channels",
+          subagentRunId: "sub-1",
+        },
+      },
+      {
+        label: "Subagent writes",
+        note: "TEXT_MESSAGE_START, tagged.",
+        event: {
+          type: EventType.TEXT_MESSAGE_START,
+          messageId: "msg-1",
+          role: "assistant",
+          subagentRunId: "sub-1",
+        },
+      },
+      {
+        label: "Subagent's answer ends",
+        note: "TEXT_MESSAGE_END, tagged.",
+        event: { type: EventType.TEXT_MESSAGE_END, messageId: "msg-1", subagentRunId: "sub-1" },
+      },
+      {
+        label: "Subagent finishes",
+        note: "SUBAGENT_FINISHED — no outcome means success.",
+        event: { type: EventType.SUBAGENT_FINISHED, subagentRunId: "sub-1" },
+      },
+      {
+        label: "Run finishes",
+        note: "RUN_FINISHED.",
+        event: { type: EventType.RUN_FINISHED, runId: "run-6" },
+      },
+    ],
+  },
+  {
+    id: "subagent-tool-mode",
+    title: "The model calls a subagent as a tool",
+    description:
+      "The parent model calls a researcher tool. The subagent runs inside that tool call, and its text comes back as the tool result.",
+    watchFor:
+      "The tool row becomes the subagent's row in place: one unit of work, one row.",
+    steps: [
+      {
+        label: "Run starts",
+        note: "RUN_STARTED.",
+        event: { type: EventType.RUN_STARTED, runId: "run-7" },
+      },
+      {
+        label: "Model calls the researcher tool",
+        note: "TOOL_CALL_START from the parent, named after the agent.",
+        event: { type: EventType.TOOL_CALL_START, toolCallId: "call-9", toolCallName: "researcher" },
+      },
+      {
+        label: "Tool arguments done",
+        note: "TOOL_CALL_END — the library now runs the tool.",
+        event: { type: EventType.TOOL_CALL_END, toolCallId: "call-9" },
+      },
+      {
+        label: "Subagent starts inside the tool",
+        note: "SUBAGENT_STARTED with parentToolCallId call-9.",
+        event: {
+          type: EventType.SUBAGENT_STARTED,
+          subagentRunId: "sub-1",
+          name: "researcher",
+          parentToolCallId: "call-9",
+        },
+      },
+      {
+        label: "Subagent writes",
+        note: "TEXT_MESSAGE_START, tagged.",
+        event: {
+          type: EventType.TEXT_MESSAGE_START,
+          messageId: "msg-1",
+          role: "assistant",
+          subagentRunId: "sub-1",
+        },
+      },
+      {
+        label: "Subagent's answer ends",
+        note: "TEXT_MESSAGE_END, tagged.",
+        event: { type: EventType.TEXT_MESSAGE_END, messageId: "msg-1", subagentRunId: "sub-1" },
+      },
+      {
+        label: "Subagent finishes",
+        note: "SUBAGENT_FINISHED.",
+        event: { type: EventType.SUBAGENT_FINISHED, subagentRunId: "sub-1" },
+      },
+      {
+        label: "Tool result",
+        note: "TOOL_CALL_RESULT from the parent — the subagent's text.",
+        event: { type: EventType.TOOL_CALL_RESULT, toolCallId: "call-9", content: "Squids have…" },
+      },
+      {
+        label: "Parent answers",
+        note: "TEXT_MESSAGE_START from the parent, untagged.",
+        event: { type: EventType.TEXT_MESSAGE_START, messageId: "msg-2", role: "assistant" },
+      },
+      {
+        label: "Parent's answer ends",
+        note: "TEXT_MESSAGE_END.",
+        event: { type: EventType.TEXT_MESSAGE_END, messageId: "msg-2" },
+      },
+      {
+        label: "Run finishes",
+        note: "RUN_FINISHED.",
+        event: { type: EventType.RUN_FINISHED, runId: "run-7" },
+      },
+    ],
+  },
+  {
+    id: "subagents-parallel",
+    title: "Two subagents in parallel",
+    description:
+      "The router starts a researcher and an seo subagent at once. Their events arrive mixed together.",
+    watchFor:
+      "Only the subagentRunId tag says who owns an event. seo finishes first while the researcher keeps going.",
+    steps: [
+      {
+        label: "Run starts",
+        note: "RUN_STARTED.",
+        event: { type: EventType.RUN_STARTED, runId: "run-8" },
+      },
+      {
+        label: "Researcher starts",
+        note: "SUBAGENT_STARTED sub-1.",
+        event: { type: EventType.SUBAGENT_STARTED, subagentRunId: "sub-1", name: "researcher" },
+      },
+      {
+        label: "seo starts",
+        note: "SUBAGENT_STARTED sub-2.",
+        event: { type: EventType.SUBAGENT_STARTED, subagentRunId: "sub-2", name: "seo" },
+      },
+      {
+        label: "seo writes",
+        note: "TEXT_MESSAGE_START tagged sub-2.",
+        event: {
+          type: EventType.TEXT_MESSAGE_START,
+          messageId: "msg-s",
+          role: "assistant",
+          subagentRunId: "sub-2",
+        },
+      },
+      {
+        label: "Researcher calls a tool",
+        note: "TOOL_CALL_START tagged sub-1 — the events mix.",
+        event: {
+          type: EventType.TOOL_CALL_START,
+          toolCallId: "call-1",
+          toolCallName: "searchChannels",
+          subagentRunId: "sub-1",
+        },
+      },
+      {
+        label: "seo's text ends",
+        note: "TEXT_MESSAGE_END tagged sub-2.",
+        event: { type: EventType.TEXT_MESSAGE_END, messageId: "msg-s", subagentRunId: "sub-2" },
+      },
+      {
+        label: "seo finishes",
+        note: "SUBAGENT_FINISHED sub-2 — the researcher is still working.",
+        event: { type: EventType.SUBAGENT_FINISHED, subagentRunId: "sub-2" },
+      },
+      {
+        label: "Researcher's tool returns",
+        note: "TOOL_CALL_RESULT tagged sub-1.",
+        event: {
+          type: EventType.TOOL_CALL_RESULT,
+          toolCallId: "call-1",
+          content: "2 channels",
+          subagentRunId: "sub-1",
+        },
+      },
+      {
+        label: "Researcher finishes",
+        note: "SUBAGENT_FINISHED sub-1.",
+        event: { type: EventType.SUBAGENT_FINISHED, subagentRunId: "sub-1" },
+      },
+      {
+        label: "Run finishes",
+        note: "RUN_FINISHED.",
+        event: { type: EventType.RUN_FINISHED, runId: "run-8" },
+      },
+    ],
+  },
+  {
+    id: "subagent-approval",
+    title: "A subagent waits for approval",
+    description:
+      "A cleaner subagent wants to delete a file. The tool needs approval, so the subagent suspends and the run ends with an interrupt.",
+    watchFor:
+      "The loader waits instead of finishing. Approve or Cancel starts the next run, which picks the same rows back up.",
+    steps: [
+      {
+        label: "Run starts",
+        note: "RUN_STARTED.",
+        event: { type: EventType.RUN_STARTED, runId: "run-9" },
+      },
+      {
+        label: "Cleaner starts",
+        note: "SUBAGENT_STARTED sub-1.",
+        event: { type: EventType.SUBAGENT_STARTED, subagentRunId: "sub-1", name: "cleaner" },
+      },
+      {
+        label: "Cleaner asks to delete a file",
+        note: "TOOL_CALL_START tagged sub-1. The tool needs approval, so it does not run.",
+        event: {
+          type: EventType.TOOL_CALL_START,
+          toolCallId: "call-1",
+          toolCallName: "deleteFile",
+          subagentRunId: "sub-1",
+        },
+      },
+      {
+        label: "Cleaner suspends",
+        note: "SUBAGENT_FINISHED with outcome suspended.",
+        event: {
+          type: EventType.SUBAGENT_FINISHED,
+          subagentRunId: "sub-1",
+          outcome: { type: "suspended", interruptIds: ["int-1"] },
+        },
+      },
+      {
+        label: "Run waits",
+        note: "RUN_FINISHED with an interrupt outcome. Nothing runs until someone answers.",
+        event: {
+          type: EventType.RUN_FINISHED,
+          runId: "run-9",
+          outcome: {
+            type: "interrupt",
+            interrupts: [
+              { id: "int-1", subagentRunId: "sub-1", toolCallId: "call-1", message: "Delete old-notes.md?" },
+            ],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: "subagent-approval-approved",
+    title: "The approval is granted",
+    description: "The next run resumes the interrupt, and the cleaner carries on.",
+    watchFor: "The waiting rows turn active again, in place.",
+    steps: [
+      {
+        label: "Next run resumes",
+        note: "RUN_STARTED with input.resume: int-1 resolved.",
+        event: {
+          type: EventType.RUN_STARTED,
+          runId: "run-10",
+          parentRunId: "run-9",
+          input: { resume: [{ interruptId: "int-1", status: "resolved" }] },
+        },
+      },
+      {
+        label: "Cleaner is back",
+        note: "SUBAGENT_STARTED with the same subagentRunId.",
+        event: { type: EventType.SUBAGENT_STARTED, subagentRunId: "sub-1", name: "cleaner" },
+      },
+      {
+        label: "The file is deleted",
+        note: "TOOL_CALL_RESULT tagged sub-1.",
+        event: {
+          type: EventType.TOOL_CALL_RESULT,
+          toolCallId: "call-1",
+          content: "deleted old-notes.md",
+          subagentRunId: "sub-1",
+        },
+      },
+      {
+        label: "Cleaner finishes",
+        note: "SUBAGENT_FINISHED.",
+        event: { type: EventType.SUBAGENT_FINISHED, subagentRunId: "sub-1" },
+      },
+      {
+        label: "Run finishes",
+        note: "RUN_FINISHED.",
+        event: { type: EventType.RUN_FINISHED, runId: "run-10" },
+      },
+    ],
+  },
+  {
+    id: "subagent-approval-cancelled",
+    title: "The approval is cancelled",
+    description: "The next run abandons the interrupt. Nothing is deleted.",
+    watchFor: "The rows that waited for the cancelled interrupt fail with “Cancelled”.",
+    steps: [
+      {
+        label: "Next run abandons the interrupt",
+        note: "RUN_STARTED with input.resume: int-1 cancelled.",
+        event: {
+          type: EventType.RUN_STARTED,
+          runId: "run-10",
+          parentRunId: "run-9",
+          input: { resume: [{ interruptId: "int-1", status: "cancelled" }] },
+        },
+      },
+      {
+        label: "Parent answers",
+        note: "TEXT_MESSAGE_START from the parent.",
+        event: { type: EventType.TEXT_MESSAGE_START, messageId: "msg-9", role: "assistant" },
+      },
+      {
+        label: "Parent's answer ends",
+        note: "TEXT_MESSAGE_END.",
+        event: { type: EventType.TEXT_MESSAGE_END, messageId: "msg-9" },
+      },
+      {
+        label: "Run finishes",
+        note: "RUN_FINISHED.",
+        event: { type: EventType.RUN_FINISHED, runId: "run-10" },
+      },
+    ],
+  },
 ];

@@ -50,5 +50,13 @@ export function useAGUILoadingDocsReplay<TState>(
     setQueue(aguiLoadingDocsScenarioEvents(scenarioId));
   }
 
-  return { state, dispatch, reset, play, playing: queue.length > 0 };
+  // -----
+  // Plays a scenario on top of the current state, e.g.
+  // the run that answers an approval.
+  // -----
+  function playNext(scenarioId: string) {
+    setQueue(aguiLoadingDocsScenarioEvents(scenarioId));
+  }
+
+  return { state, dispatch, reset, play, playNext, playing: queue.length > 0 };
 }

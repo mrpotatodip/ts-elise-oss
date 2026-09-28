@@ -1,13 +1,16 @@
 import { createContext, use, type ComponentProps } from "react";
 
-import type { AGUILoadingPresence, AGUILoadingWhenDone } from "../../..";
+import type { AGUILoadingPresence, AGUILoadingStatusKey, AGUILoadingWhenDone } from "../../..";
 import { cn } from "../cn";
 
 import { useAGUILoadingPresence } from "../use-agui-loading-presence";
 
 type AGUILoadingContextValue = {
   active: boolean;
+  waiting: boolean;
   eventType: string | null;
+  captionKey: string | AGUILoadingStatusKey | null;
+  subagent: string | null;
   presence: AGUILoadingPresence;
 };
 
@@ -43,29 +46,42 @@ export type AGUILoadingProps = Omit<ComponentProps<"div">, "role"> & {
   active: boolean;
   // The latest event. Picks which text and icon the parts show.
   eventType: string | null;
+  // true while the run waits for input (state.status === "waiting").
+  waiting?: boolean;
+  // true when the run was cancelled (state.status === "stopped").
+  stopped?: boolean;
+  // Name of the subagent that sent the latest event (state.subagentName).
+  subagent?: string | null;
 } & AGUILoadingWhenDoneProps;
 
 // -----
-// Root of the loader. Put the parts inside in any
-// order, with your own elements between them.
-// Style each state with data-presence:
-// running, lingering or done.
+// Root of the loader; parts go inside in any order.
+// data-presence: running, waiting, lingering, done.
 // -----
 export function AGUILoading({
   active,
   eventType,
+  waiting = false,
+  stopped = false,
+  subagent = null,
   whenDone,
   lingerMs,
   className,
   children,
   ...props
 }: AGUILoadingProps) {
-  const presence = useAGUILoadingPresence(active, { whenDone, lingerMs });
+  const presence = useAGUILoadingPresence(active, { whenDone, lingerMs }, waiting);
 
   if (presence === "hidden") return null;
 
+  // -----
+  // Waiting and stopped have their own captions and
+  // icons, keyed "waiting" and "stopped".
+  // -----
+  const captionKey = waiting ? "waiting" : stopped && !active ? "stopped" : eventType;
+
   return (
-    <AGUILoadingContext value={{ active, eventType, presence }}>
+    <AGUILoadingContext value={{ active, waiting, eventType, captionKey, subagent, presence }}>
       <div
         role="status"
         aria-busy={presence === "running"}
