@@ -15,7 +15,7 @@ import { EventType } from "@ag-ui/core";
 // -----
 export { EventType };
 
-type SubagentTag = { subagentRunId?: string };
+export type AGUILoadingSubagentTag = { subagentRunId?: string };
 
 export type AGUILoadingInterrupt = {
   id: string;
@@ -46,12 +46,12 @@ export type AGUILoadingStreamEvent =
       parentRunId?: string;
       input?: { resume?: AGUILoadingResumeEntry[] };
     }
-  | ({ type: EventType.TEXT_MESSAGE_START; messageId: string; role: string } & SubagentTag)
-  | ({ type: EventType.TEXT_MESSAGE_CONTENT; messageId: string; delta: string } & SubagentTag)
-  | ({ type: EventType.TEXT_MESSAGE_END; messageId: string } & SubagentTag)
-  | ({ type: EventType.TOOL_CALL_START; toolCallId: string; toolCallName: string } & SubagentTag)
-  | ({ type: EventType.TOOL_CALL_RESULT; toolCallId: string; content: string } & SubagentTag)
-  | ({ type: EventType.TOOL_CALL_END; toolCallId: string } & SubagentTag)
+  | ({ type: EventType.TEXT_MESSAGE_START; messageId: string; role: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.TEXT_MESSAGE_CONTENT; messageId: string; delta: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.TEXT_MESSAGE_END; messageId: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.TOOL_CALL_START; toolCallId: string; toolCallName: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.TOOL_CALL_RESULT; toolCallId: string; content: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.TOOL_CALL_END; toolCallId: string } & AGUILoadingSubagentTag)
   | { type: EventType.RUN_FINISHED; runId: string; outcome?: AGUILoadingRunOutcome }
   | { type: EventType.RUN_ERROR; message: string; code?: string }
   | {
@@ -93,6 +93,7 @@ export type AGUILoadingState = {
   error: { message: string; code?: string } | null;
   subagentName: string | null;
   subagentNames: Record<string, string>;
+  subagentParentIds: Record<string, string>;
   interruptIds: string[];
 };
 
@@ -107,6 +108,7 @@ export const initialAGUILoadingState: AGUILoadingState = {
   error: null,
   subagentName: null,
   subagentNames: {},
+  subagentParentIds: {},
   interruptIds: [],
 };
 
@@ -135,16 +137,15 @@ export function continuesWaitingRun(
 ): boolean {
   if (waiting.status !== "waiting") return false;
   const resume = event.input?.resume;
-  if (resume) return resume.some((entry) => waiting.interruptIds.includes(entry.interruptId));
+  if (resume?.length) return resume.some((entry) => waiting.interruptIds.includes(entry.interruptId));
   return event.parentRunId !== undefined && event.parentRunId === waiting.runId;
 }
 
 // -----
-// Name of the subagent that owns the event: its
-// tag's name, or null for the parent's own events.
+// The name of a subagent run, or null for
+// the parent agent (no id).
 // -----
-function ownerName(state: AGUILoadingState, event: AGUILoadingStreamEvent): string | null {
-  const id = "subagentRunId" in event ? event.subagentRunId : undefined;
+function findSubagentName(state: AGUILoadingState, id: string | undefined): string | null {
   return id === undefined ? null : (state.subagentNames[id] ?? null);
 }
 
@@ -161,15 +162,19 @@ export function aguiLoadingReducer(
 
   const next = reduceStreamEvent(state, event);
   if (event.type === EventType.RUN_STARTED || next.status === "waiting") return next;
+  if (event.type === EventType.RUN_FINISHED || event.type === EventType.RUN_ERROR) {
+    return { ...next, subagentName: null };
+  }
   // -----
-  // An ended run, or a subagent that succeeded, hands
-  // the line back to the parent: no name.
+  // A finished subagent hands the line back to
+  // whoever started it: a parent subagent, or none.
   // -----
-  const handsBack =
-    event.type === EventType.RUN_FINISHED ||
-    event.type === EventType.RUN_ERROR ||
-    (event.type === EventType.SUBAGENT_FINISHED && event.outcome?.type !== "suspended");
-  return { ...next, subagentName: handsBack ? null : ownerName(next, event) };
+  if (event.type === EventType.SUBAGENT_FINISHED && event.outcome?.type !== "suspended") {
+    const parentId = next.subagentParentIds[event.subagentRunId];
+    return { ...next, subagentName: findSubagentName(next, parentId) };
+  }
+  const ownerId = "subagentRunId" in event ? event.subagentRunId : undefined;
+  return { ...next, subagentName: findSubagentName(next, ownerId) };
 }
 
 function reduceStreamEvent(
@@ -200,6 +205,10 @@ function reduceStreamEvent(
         ...state,
         lastEventType: event.type,
         subagentNames: { ...state.subagentNames, [event.subagentRunId]: event.name },
+        subagentParentIds:
+          event.parentSubagentRunId === undefined
+            ? state.subagentParentIds
+            : { ...state.subagentParentIds, [event.subagentRunId]: event.parentSubagentRunId },
       };
 
     case EventType.SUBAGENT_FINISHED:

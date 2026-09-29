@@ -331,6 +331,17 @@ describe("aguiLoadingStackedReducer waiting", () => {
     expect(step(state, "subagent:sub-1").status).toBe("active");
   });
 
+  it("falls back to the parent run when input.resume is empty", () => {
+    const state = aguiLoadingStackedReducer(waiting, {
+      type: EventType.RUN_STARTED,
+      runId: "run-2",
+      parentRunId: "run-1",
+      input: { resume: [] },
+    });
+    expect(state.stepOrder).toEqual(waiting.stepOrder);
+    expect(step(state, "tool:tc-1").status).toBe("active");
+  });
+
   it("starts a new list when the next run doesn't continue it", () => {
     const state = aguiLoadingStackedReducer(waiting, { type: EventType.RUN_STARTED, runId: "run-2" });
     expect(rows(state)).toEqual(["run:active"]);
@@ -338,6 +349,29 @@ describe("aguiLoadingStackedReducer waiting", () => {
 });
 
 describe("aguiLoadingStackedReducer outcomes", () => {
+  const suspended: AGUILoadingStackedEvent[] = [
+    START,
+    subagent("sub-1", "researcher"),
+    {
+      type: EventType.SUBAGENT_FINISHED,
+      subagentRunId: "sub-1",
+      outcome: { type: "suspended", interruptIds: ["int-1"] },
+    },
+  ];
+
+  it("ends a suspended subagent's row with the run, however the run ends", () => {
+    expect(step(run([...suspended, FINISH]), "subagent:sub-1").status).toBe("done");
+
+    const stopped = run([
+      ...suspended,
+      { type: EventType.RUN_FINISHED, runId: "run-1", outcome: { type: "cancelled" } },
+    ]);
+    expect(step(stopped, "subagent:sub-1")).toMatchObject({ status: "failed", failReason: "stopped" });
+
+    const failed = run([...suspended, { type: EventType.RUN_ERROR, message: "boom" }]);
+    expect(step(failed, "subagent:sub-1").status).toBe("failed");
+  });
+
   it("stops a cancelled run and fails its open rows", () => {
     const state = run([
       START,

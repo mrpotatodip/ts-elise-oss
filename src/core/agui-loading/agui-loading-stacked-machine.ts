@@ -1,8 +1,10 @@
 import {
   continuesWaitingRun,
   EventType,
+  type AGUILoadingInterrupt,
   type AGUILoadingResumeEntry,
   type AGUILoadingStreamEvent,
+  type AGUILoadingSubagentTag,
   type LoadingStatus,
 } from "./agui-loading-machine";
 
@@ -13,15 +15,13 @@ import {
 // tests never change because of this one.
 // -----
 
-type SubagentTag = { subagentRunId?: string };
-
 export type AGUILoadingStackedEvent =
   | AGUILoadingStreamEvent
-  | ({ type: EventType.REASONING_START; messageId: string } & SubagentTag)
-  | ({ type: EventType.REASONING_MESSAGE_START; messageId: string } & SubagentTag)
-  | ({ type: EventType.REASONING_MESSAGE_CONTENT; messageId: string; delta: string } & SubagentTag)
-  | ({ type: EventType.REASONING_MESSAGE_END; messageId: string } & SubagentTag)
-  | ({ type: EventType.REASONING_END; messageId: string } & SubagentTag);
+  | ({ type: EventType.REASONING_START; messageId: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.REASONING_MESSAGE_START; messageId: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.REASONING_MESSAGE_CONTENT; messageId: string; delta: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.REASONING_MESSAGE_END; messageId: string } & AGUILoadingSubagentTag)
+  | ({ type: EventType.REASONING_END; messageId: string } & AGUILoadingSubagentTag);
 
 // "error" is the row RUN_ERROR adds so the failure is always visible,
 // even when every other row had already finished.
@@ -104,7 +104,7 @@ function isTerminal(state: AGUILoadingStackedState): boolean {
 // The subagent a tagged event belongs to, with its
 // name if SUBAGENT_STARTED announced it.
 // -----
-function ownerOf(state: AGUILoadingStackedState, event: AGUILoadingStackedEvent): StepOwner {
+function findOwner(state: AGUILoadingStackedState, event: AGUILoadingStackedEvent): StepOwner {
   const id = "subagentRunId" in event ? event.subagentRunId : undefined;
   if (id === undefined) return PARENT_OWNER;
   return { subagentRunId: id, subagentName: state.subagentNames[id] ?? null };
@@ -162,13 +162,17 @@ function updateSteps(
   return steps;
 }
 
-function settleActiveSteps(
+// -----
+// Ends every open row: working, or waiting on a
+// suspended subagent that no interrupt followed.
+// -----
+function settleOpenSteps(
   state: AGUILoadingStackedState,
   status: "done" | "failed",
   failReason: AGUILoadingStackedFailReason | null = null,
 ): Record<string, AGUILoadingStackedStep> {
   return updateSteps(state, (step) =>
-    step.status === "active" ? { ...step, status, failReason } : step,
+    step.status === "active" || step.status === "waiting" ? { ...step, status, failReason } : step,
   );
 }
 
@@ -194,7 +198,7 @@ function reasoningTarget(state: AGUILoadingStackedState, messageId: string): str
 // The subagent and every subagent nested under it,
 // found through parentSubagentRunId links.
 // -----
-function subagentFamily(state: AGUILoadingStackedState, rootId: string): Set<string> {
+function collectSubagentFamily(state: AGUILoadingStackedState, rootId: string): Set<string> {
   const family = new Set([rootId]);
   let grew = true;
   while (grew) {
@@ -253,7 +257,7 @@ function startSubagent(
 function waitForInterrupts(
   state: AGUILoadingStackedState,
   eventType: EventType,
-  interrupts: { id: string; subagentRunId?: string; toolCallId?: string }[],
+  interrupts: AGUILoadingInterrupt[],
 ): AGUILoadingStackedState {
   const interruptStepIds: Record<string, string[]> = {};
   for (const interrupt of interrupts) {
@@ -339,7 +343,7 @@ export function aguiLoadingStackedReducer(
         "tool",
         event.type,
         { toolCallName: event.toolCallName },
-        ownerOf(state, event),
+        findOwner(state, event),
       );
 
     // A result is what the user waited for, so it completes the row;
@@ -351,7 +355,7 @@ export function aguiLoadingStackedReducer(
         "tool",
         event.type,
         { status: "done" },
-        ownerOf(state, event),
+        findOwner(state, event),
       );
 
     case EventType.TOOL_CALL_END:
@@ -361,7 +365,7 @@ export function aguiLoadingStackedReducer(
         "tool",
         event.type,
         {},
-        ownerOf(state, event),
+        findOwner(state, event),
       );
 
     case EventType.TEXT_MESSAGE_START:
@@ -372,7 +376,7 @@ export function aguiLoadingStackedReducer(
         "message",
         event.type,
         {},
-        ownerOf(state, event),
+        findOwner(state, event),
       );
 
     case EventType.TEXT_MESSAGE_END:
@@ -382,7 +386,7 @@ export function aguiLoadingStackedReducer(
         "message",
         event.type,
         { status: "done" },
-        ownerOf(state, event),
+        findOwner(state, event),
       );
 
     case EventType.REASONING_START:
@@ -394,7 +398,7 @@ export function aguiLoadingStackedReducer(
         "reasoning",
         event.type,
         {},
-        ownerOf(state, event),
+        findOwner(state, event),
       );
 
     case EventType.REASONING_MESSAGE_END:
@@ -405,7 +409,7 @@ export function aguiLoadingStackedReducer(
         "reasoning",
         event.type,
         { status: "done" },
-        ownerOf(state, event),
+        findOwner(state, event),
       );
 
     case EventType.SUBAGENT_STARTED:
@@ -424,7 +428,7 @@ export function aguiLoadingStackedReducer(
     // run, the parent and other subagents go on.
     // -----
     case EventType.SUBAGENT_ERROR: {
-      const family = subagentFamily(state, event.subagentRunId);
+      const family = collectSubagentFamily(state, event.subagentRunId);
       const id = state.subagentStepIds[event.subagentRunId];
       const failed: AGUILoadingStackedState = {
         ...state,
@@ -459,14 +463,14 @@ export function aguiLoadingStackedReducer(
           ...state,
           status: "stopped",
           lastEventType: event.type,
-          steps: settleActiveSteps(state, "failed", "stopped"),
+          steps: settleOpenSteps(state, "failed", "stopped"),
         };
       }
       return {
         ...state,
         status: "done",
         lastEventType: event.type,
-        steps: settleActiveSteps(state, "done"),
+        steps: settleOpenSteps(state, "done"),
       };
     }
 
@@ -483,7 +487,7 @@ export function aguiLoadingStackedReducer(
         status: "failed",
         lastEventType: event.type,
         steps: {
-          ...settleActiveSteps(state, "failed"),
+          ...settleOpenSteps(state, "failed"),
           [ERROR_STEP_ID]: {
             id: ERROR_STEP_ID,
             kind: "error",
