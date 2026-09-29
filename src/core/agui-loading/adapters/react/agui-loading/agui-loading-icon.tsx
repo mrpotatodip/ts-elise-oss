@@ -29,8 +29,8 @@ export type AGUILoadingIconProps<TEvent extends string = EventType> = Omit<
 };
 
 // -----
-// The icon for the latest event. It pauses when
-// the run is over, and is still while it waits.
+// The icon for the latest event. Its animation freezes
+// when the run ends; a waiting run shows a pause icon.
 // -----
 export function AGUILoadingIcon<TEvent extends string = EventType>({
   byEvent,

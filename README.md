@@ -155,23 +155,30 @@ with TanStack AI subagents and any other spec-following stream.
   `data-subagent`, and `<AGUILoadingStackedStepSubagent />` shows its name. In
   tool mode the parent's tool call becomes the subagent's row in place. A
   failed subagent fails only its own rows; the run goes on.
-- **Waiting for input.** A `RUN_FINISHED` with an `interrupt` outcome (or a
-  subagent that suspends) sets `status: "waiting"`. The loader stays on screen
-  until the next run, whatever `whenDone` says, with a still pause icon and
-  rotating "waiting" captions (`byEvent={{ waiting: [...] }}`, or
-  `waitingByEvent` on the stacked parts). A next run that resumes one of the
-  interrupts (`input.resume`, else `parentRunId`) picks the same rows back up;
-  a cancelled interrupt fails its rows.
+- **Waiting for input.** A `RUN_FINISHED` with an `interrupt` outcome sets
+  `status: "waiting"`. The loader stays on screen until the next run, whatever
+  `whenDone` says, with a still pause icon and rotating "waiting" captions
+  (`byEvent={{ waiting: [...] }}`, or `waitingByEvent` on the stacked parts).
+  A next run that resumes one of the interrupts (a non-empty `input.resume`,
+  else `parentRunId`) picks the same rows back up; a cancelled interrupt fails
+  its rows. A subagent that suspends marks only its own stacked row as
+  waiting; if the run then ends without an interrupt, that row ends with it.
 - **Stopped.** A `cancelled` outcome sets `status: "stopped"` and shows the
   "stopped" captions; the stacked loader fails its open rows with "Stopped".
 - A run that stops for a frontend tool (`pendingToolCallIds`) is still
   treated as done.
 
 **Breaking type changes** if you copied an earlier version: `LoadingStatus`
-gains `"waiting"` and `"stopped"`, stacked rows gain the `"subagent"` kind, the
-`"waiting"` status and the fields `subagentRunId`, `subagentName`,
-`parentSubagentRunId` and `failReason`. TypeScript points at every place to
-update.
+gains `"waiting"` and `"stopped"`. `AGUILoadingState` gains `subagentName`,
+`subagentNames`, `subagentParentIds` and `interruptIds`. Stacked rows gain the
+`"subagent"` kind, the `"waiting"` status and the fields `subagentRunId`,
+`subagentName`, `parentSubagentRunId` and `failReason`.
+`AGUILoadingStackedState` gains `subagentNames`, `subagentStepIds`,
+`interruptIds` and `interruptStepIds`, and `AGUILoadingPresence` gains
+`"waiting"`. `AGUILoadingStreamEvent` (and so `AGUILoadingStackedEvent`) gains
+the `SUBAGENT_STARTED`, `SUBAGENT_FINISHED` and `SUBAGENT_ERROR` events, and
+`AGUILoadingStackedStartEvent` gains `SUBAGENT_STARTED`. TypeScript points at
+every place to update.
 
 ## Status
 

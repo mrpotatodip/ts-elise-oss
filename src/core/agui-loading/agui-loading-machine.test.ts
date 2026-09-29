@@ -147,6 +147,22 @@ describe("aguiLoadingReducer subagents", () => {
     expect(ended.subagentName).toBeNull();
   });
 
+  it("hands the name back to the parent subagent when a nested one finishes", () => {
+    const state = run([
+      START,
+      subagentStarted("sub-1", "researcher"),
+      {
+        type: EventType.SUBAGENT_STARTED,
+        subagentRunId: "sub-2",
+        name: "fact-checker",
+        parentSubagentRunId: "sub-1",
+      },
+      taggedTool("tc-1", "sub-2"),
+      { type: EventType.SUBAGENT_FINISHED, subagentRunId: "sub-2" },
+    ]);
+    expect(state.subagentName).toBe("researcher");
+  });
+
   it("keeps the name of a subagent that suspends", () => {
     const state = run([
       START,
@@ -218,6 +234,17 @@ describe("aguiLoadingReducer waiting", () => {
       type: EventType.RUN_STARTED,
       runId: "run-2",
       parentRunId: "run-1",
+    });
+    expect(state.status).toBe("running");
+    expect(state.toolCallOrder).toEqual(["tc-1"]);
+  });
+
+  it("falls back to the parent run when input.resume is empty", () => {
+    const state = aguiLoadingReducer(waiting, {
+      type: EventType.RUN_STARTED,
+      runId: "run-2",
+      parentRunId: "run-1",
+      input: { resume: [] },
     });
     expect(state.status).toBe("running");
     expect(state.toolCallOrder).toEqual(["tc-1"]);

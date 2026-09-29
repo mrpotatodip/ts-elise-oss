@@ -255,10 +255,10 @@ export const LOADING_TEXTS_BY_EVENT = {
   ],
   [WAITING_LOADING_TEXTS_KEY]: [
     "Waiting",
-    "Idling",
+    "Waiting on you",
     "Standing by",
     "Holding",
-    "Paused",
+    "Needs your input",
   ],
   [STOPPED_LOADING_TEXTS_KEY]: [
     "Stopped",
